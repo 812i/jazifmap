@@ -1,623 +1,268 @@
+
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
 
-# =====================================================
-# JAZIF MAP | KING SALMAN PARK
-# =====================================================
-
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="JAZIF MAP",
     page_icon="🌿",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+    layout="wide"
 )
 
-# -------------------- COLORS -------------------------
+# ---------------- STYLE ----------------
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
-DARK = "#263D32"
-GREEN = "#496653"
-SOFT = "#E7EDE5"
-BG = "#F7F7F2"
-WHITE = "#FFFFFF"
-MUTED = "#66766A"
-BORDER = "#E2E8DF"
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+}
 
-# -------------------- PLACES -------------------------
+.stApp {
+    background: #F7F7F2;
+    color: #263D32;
+}
 
+.block-container {
+    max-width: 1200px;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
+
+.hero {
+    background: #263D32;
+    color: #F7F7F2;
+    padding: 35px;
+    border-radius: 22px;
+    margin-bottom: 25px;
+}
+
+.eyebrow {
+    color: #C5D3C6;
+    font-size: 12px;
+    letter-spacing: 3px;
+    font-weight: 700;
+}
+
+.hero h1 {
+    font-size: clamp(38px, 7vw, 65px);
+    margin: 12px 0;
+    font-weight: 800;
+    letter-spacing: -2px;
+}
+
+.hero p {
+    color: #E2E8DF;
+    font-size: 15px;
+    max-width: 520px;
+    line-height: 1.8;
+}
+
+.section-title {
+    font-size: 23px;
+    font-weight: 800;
+    color: #263D32;
+    margin: 20px 0 12px;
+}
+
+.place-card {
+    background: white;
+    border: 1px solid #E2E8DF;
+    border-radius: 17px;
+    padding: 19px;
+    margin-bottom: 12px;
+}
+
+.place-category {
+    color: #66766A;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.place-card h3 {
+    color: #263D32;
+    margin: 8px 0;
+    font-size: 19px;
+}
+
+.place-card p {
+    color: #66766A;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.footer {
+    color: #66766A;
+    font-size: 12px;
+    text-align: center;
+    padding: 30px 0 10px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- PLACES ----------------
 PLACES = [
     {
-        "id": "visitor",
-        "name": "جناح الزوار",
-        "english": "Visitor Pavilion",
-        "category": "مرافق وخدمات",
-        "icon": "🏛️",
-        "description": "جناح الزوار، ويضم مرافق استقبال ومعارض ومساحات للفعاليات.",
+        "name": "Visitor Pavilion",
+        "category": "Visitor Experience",
+        "description": "A starting point for visitors to explore the park and discover its destinations.",
         "lat": 24.7143,
-        "lon": 46.71166,
-        "verified": True,
-        "source": "OpenStreetMap data via Mapcarta",
+        "lon": 46.71166
     },
     {
-        "id": "royal",
-        "name": "المجمع الملكي للفنون",
-        "english": "Royal Arts Complex",
-        "category": "ثقافة وفنون",
-        "icon": "🎨",
-        "description": "وجهة ثقافية وفنية تضم مجموعة من المرافق الفنية والثقافية.",
-        "lat": None,
-        "lon": None,
-        "verified": False,
-        "source": "King Salman Park Foundation",
+        "name": "Royal Arts Complex",
+        "category": "Arts & Culture",
+        "description": "A destination dedicated to arts, creativity and cultural experiences.",
+        "lat": 24.7160,
+        "lon": 46.7100
     },
     {
-        "id": "museum",
-        "name": "متحف الثقافات العالمية",
-        "english": "Museum of World Cultures",
-        "category": "ثقافة وفنون",
-        "icon": "🏺",
-        "description": "متحف ضمن المجمع الملكي للفنون، مخصص للتعرف على ثقافات العالم.",
-        "lat": None,
-        "lon": None,
-        "verified": False,
-        "source": "Saudi Vision 2030",
+        "name": "Museum of World Cultures",
+        "category": "Museum",
+        "description": "A cultural destination celebrating different cultures and stories.",
+        "lat": 24.7170,
+        "lon": 46.7130
     },
     {
-        "id": "cinema",
-        "name": "السينما الخارجية",
-        "english": "Outdoor Cinema",
-        "category": "ترفيه",
-        "icon": "🎬",
-        "description": "مساحة سينمائية خارجية ضمن وجهات الحديقة.",
-        "lat": None,
-        "lon": None,
-        "verified": False,
-        "source": "King Salman Park Foundation",
+        "name": "Outdoor Cinema",
+        "category": "Entertainment",
+        "description": "An outdoor destination for screenings and shared experiences.",
+        "lat": 24.7125,
+        "lon": 46.7150
     },
     {
-        "id": "amphi",
-        "name": "المسرح المكشوف",
-        "english": "Amphitheater",
-        "category": "ترفيه",
-        "icon": "🎭",
-        "description": "مسرح خارجي للعروض والفعاليات.",
-        "lat": None,
-        "lon": None,
-        "verified": False,
-        "source": "King Salman Park Foundation",
+        "name": "Amphitheater",
+        "category": "Entertainment",
+        "description": "A space for performances, gatherings and cultural events.",
+        "lat": 24.7105,
+        "lon": 46.7105
     },
     {
-        "id": "artpark",
-        "name": "حديقة الفنون",
-        "english": "Art Park",
-        "category": "طبيعة وحدائق",
-        "icon": "🌳",
-        "description": "مساحة تجمع الفن والطبيعة والتجارب الخارجية.",
-        "lat": None,
-        "lon": None,
-        "verified": False,
-        "source": "King Salman Park Foundation",
+        "name": "Art Park",
+        "category": "Nature & Art",
+        "description": "An open space combining nature and artistic experiences.",
+        "lat": 24.7180,
+        "lon": 46.7080
     },
     {
-        "id": "loop",
-        "name": "مسار المشاة",
-        "english": "Walking Trails",
-        "category": "رياضة ومشي",
-        "icon": "🚶",
-        "description": "مسارات للمشي والحركة والاستمتاع بالمساحات الخضراء.",
-        "lat": None,
-        "lon": None,
-        "verified": False,
-        "source": "King Salman Park Foundation",
-    },
+        "name": "Walking Trails",
+        "category": "Outdoor",
+        "description": "Outdoor paths for walking, exploring and enjoying the surroundings.",
+        "lat": 24.7130,
+        "lon": 46.7060
+    }
 ]
 
-CATEGORIES = [
-    "الكل",
-    "ثقافة وفنون",
-    "طبيعة وحدائق",
-    "ترفيه",
-    "رياضة ومشي",
-    "مرافق وخدمات",
-]
-
-# -------------------- CSS -----------------------------
-
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
-
-    html, body, [class*="css"], button, input {
-        font-family: 'IBM Plex Sans Arabic', sans-serif !important;
-    }
-
-    .stApp {
-        background: #F7F7F2;
-        color: #263D32;
-    }
-
-    header[data-testid="stHeader"] {
-        background: transparent;
-    }
-
-    #MainMenu, footer {
-        visibility: hidden;
-    }
-
-    .block-container {
-        max-width: 1150px;
-        padding: 1.2rem 1rem 3rem !important;
-    }
-
-    .map-header {
-        background: #263D32;
-        color: white;
-        border-radius: 22px;
-        padding: 24px 22px;
-        margin-bottom: 20px;
-    }
-
-    .map-header h1 {
-        color: white !important;
-        font-size: 30px;
-        margin: 8px 0;
-    }
-
-    .map-header p {
-        color: #E7EDE5 !important;
-        font-size: 14px;
-        margin-bottom: 0;
-    }
-
-    .eyebrow {
-        color: #DCE8D9;
-        font-size: 11px;
-        letter-spacing: 2px;
-        font-weight: 600;
-    }
-
-    .section-heading {
-        color: #263D32;
-        font-size: 21px;
-        font-weight: 700;
-        margin: 22px 0 10px;
-    }
-
-    .place-icon {
-        font-size: 25px;
-    }
-
-    .place-name {
-        color: #263D32;
-        font-size: 16px;
-        font-weight: 700;
-    }
-
-    .place-en {
-        color: #66766A;
-        font-size: 12px;
-    }
-
-    .place-desc {
-        color: #66766A;
-        font-size: 13px;
-        line-height: 1.8;
-        margin-top: 7px;
-    }
-
-    .status {
-        display: inline-block;
-        padding: 5px 9px;
-        border-radius: 20px;
-        background: #E7EDE5;
-        color: #263D32;
-        font-size: 11px;
-        margin-top: 8px;
-    }
-
-    .status-pending {
-        background: #F2EFE4;
-        color: #786B42;
-    }
-
-    .stButton button {
-        background: #263D32 !important;
-        color: white !important;
-        border: 1px solid #263D32 !important;
-        border-radius: 12px !important;
-        min-height: 42px;
-        font-weight: 600;
-    }
-
-    .stButton button p {
-        color: white !important;
-    }
-
-    .stSelectbox div[data-baseweb="select"] > div {
-        background: white;
-        border-radius: 12px;
-        border-color: #E2E8DF;
-    }
-
-    .map-note {
-        background: #E7EDE5;
-        border-radius: 13px;
-        padding: 12px 14px;
-        color: #263D32;
-        font-size: 12px;
-        line-height: 1.8;
-        margin: 12px 0;
-    }
-
-    .footer {
-        color: #66766A;
-        text-align: center;
-        font-size: 12px;
-        padding: 28px 5px;
-    }
-
-    @media(max-width: 600px) {
-        .block-container {
-            padding: 0.7rem 0.7rem 2rem !important;
-        }
-
-        .map-header {
-            padding: 21px 17px;
-            border-radius: 18px;
-        }
-
-        .map-header h1 {
-            font-size: 25px;
-        }
-
-        .section-heading {
-            font-size: 19px;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# -------------------- SESSION STATE ------------------
-
-if "selected_place" not in st.session_state:
-    st.session_state.selected_place = "visitor"
-
-if "saved_places" not in st.session_state:
-    st.session_state.saved_places = []
-
-# -------------------- HEADER --------------------------
-
-st.markdown(
-    """
-    <div class="map-header">
-        <div class="eyebrow">JAZIF PRESENTS</div>
-        <h1>JAZIF MAP 🌿</h1>
-        <p>اكتشف حديقة الملك سلمان، مكاناً بعد مكان.</p>
-        <p>Explore · Discover · Connect</p>
+# ---------------- HEADER ----------------
+st.markdown("""
+<div class="hero">
+    <div class="eyebrow">DISCOVER • EXPLORE • CONNECT</div>
+    <h1>JAZIF MAP.</h1>
+    <p>
+        Your guide to discovering the destinations, spaces
+        and experiences of King Salman Park.
+    </p>
+    <div style="margin-top:25px;color:#C5D3C6;font-size:12px;">
+        RIYADH, SAUDI ARABIA &nbsp; / &nbsp; EXPLORE THE PARK
     </div>
-    """,
-    unsafe_allow_html=True,
+</div>
+""", unsafe_allow_html=True)
+
+# ---------------- FILTERS ----------------
+st.markdown('<div class="section-title">Explore the map</div>', unsafe_allow_html=True)
+
+categories = ["All"] + sorted(set(p["category"] for p in PLACES))
+
+selected_category = st.selectbox(
+    "Choose a category",
+    categories
 )
-
-# -------------------- FILTERS -------------------------
-
-st.markdown(
-    '<div class="section-heading">استكشف الخريطة</div>',
-    unsafe_allow_html=True,
-)
-
-filter_col, info_col = st.columns([2, 1])
-
-with filter_col:
-    selected_category = st.selectbox(
-        "اختر نوع المكان",
-        CATEGORIES,
-        index=0,
-    )
-
-with info_col:
-    display_mode = st.selectbox(
-        "طريقة العرض",
-        ["الخريطة", "قائمة الأماكن"],
-        key="display_mode",
-    )
 
 filtered_places = [
-    place for place in PLACES
-    if selected_category == "الكل"
-    or place["category"] == selected_category
+    p for p in PLACES
+    if selected_category == "All" or p["category"] == selected_category
 ]
 
-# -------------------- MAP -----------------------------
+# ---------------- MAP ----------------
+st.markdown("""
+<div style="color:#66766A;font-size:13px;margin-bottom:12px;">
+    Select a marker to discover more about each destination.
+</div>
+""", unsafe_allow_html=True)
 
-if display_mode == "الخريطة":
-
-    st.markdown(
-        '<div class="section-heading">خريطة حديقة الملك سلمان</div>',
-        unsafe_allow_html=True,
-    )
-
-    # المواقع التي نملك إحداثيات لها فقط
-    mapped_places = [
-        place for place in filtered_places
-        if place["lat"] is not None
-        and place["lon"] is not None
-    ]
-
-    # مركز الخريطة
-    visitor = next(
-        p for p in PLACES
-        if p["id"] == "visitor"
-    )
-
-    park_map = folium.Map(
-        location=[visitor["lat"], visitor["lon"]],
-        zoom_start=15,
-        tiles="OpenStreetMap",
-        control_scale=True,
-    )
-
-    # إضافة العلامات
-    for place in mapped_places:
-
-        popup_html = f"""
-        <div style="
-            font-family:Arial;
-            min-width:150px;
-            text-align:center;
-            padding:8px;
-        ">
-            <div style="font-size:24px;">
-                {place['icon']}
-            </div>
-            <b>{place['name']}</b>
-            <br>
-            <span>{place['english']}</span>
-            <br>
-            <small>{place['category']}</small>
-        </div>
-        """
-
-        folium.Marker(
-            location=[place["lat"], place["lon"]],
-            tooltip=place["name"],
-            popup=folium.Popup(
-                popup_html,
-                max_width=230,
-            ),
-            icon=folium.Icon(
-                color="green",
-                icon="info-sign",
-            ),
-        ).add_to(park_map)
-
-    # عرض الخريطة واستقبال الضغط على العلامات
-    map_result = st_folium(
-        park_map,
-        use_container_width=True,
-        height=440,
-        returned_objects=[
-            "last_object_clicked",
-            "last_object_clicked_tooltip",
-        ],
-        key="jazif_interactive_map",
-    )
-
-    # عند الضغط على Pin: تحديد المكان المختار
-    if map_result:
-
-        clicked_name = map_result.get(
-            "last_object_clicked_tooltip"
-        )
-
-        if clicked_name:
-            clicked_place = next(
-                (
-                    p for p in PLACES
-                    if p["name"] == clicked_name
-                ),
-                None,
-            )
-
-            if clicked_place:
-                st.session_state.selected_place = (
-                    clicked_place["id"]
-                )
-
-        # طريقة احتياطية تعتمد على إحداثيات الضغط
-        clicked_coordinates = map_result.get(
-            "last_object_clicked"
-        )
-
-        if clicked_coordinates and not clicked_name:
-
-            click_lat = clicked_coordinates.get("lat")
-            click_lon = clicked_coordinates.get("lng")
-
-            if click_lat is not None and click_lon is not None:
-
-                for place in mapped_places:
-
-                    if (
-                        abs(place["lat"] - click_lat) < 0.00015
-                        and abs(place["lon"] - click_lon) < 0.00015
-                    ):
-                        st.session_state.selected_place = (
-                            place["id"]
-                        )
-                        break
-
-    st.markdown(
-        """
-        <div class="map-note">
-            📍 اضغط على العلامة الخضراء لعرض تفاصيل المكان.
-            ستتم إضافة بقية المواقع بعد التحقق من إحداثياتها.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-# -------------------- PLACE LIST ---------------------
-
-st.markdown(
-    '<div class="section-heading">وجهات الحديقة</div>',
-    unsafe_allow_html=True,
+park_map = folium.Map(
+    location=[24.7143, 46.71166],
+    zoom_start=14,
+    tiles="CartoDB positron",
+    control_scale=True
 )
 
 for place in filtered_places:
-
-    with st.container(border=True):
-
-        col1, col2 = st.columns([4, 1])
-
-        with col1:
-
-            st.markdown(
-                f"""
-                <div class="place-icon">{place['icon']}</div>
-                <div class="place-name">{place['name']}</div>
-                <div class="place-en">{place['english']}</div>
-                <div class="place-desc">{place['description']}</div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            if place["verified"]:
-                st.markdown(
-                    '<span class="status">📍 موقع منشور</span>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    '<span class="status status-pending">'
-                    'الموقع الدقيق قيد التحقق'
-                    '</span>',
-                    unsafe_allow_html=True,
-                )
-
-        with col2:
-
-            if st.button(
-                "التفاصيل",
-                key=f"details_{place['id']}",
-                use_container_width=True,
-            ):
-                st.session_state.selected_place = place["id"]
-                st.rerun()
-
-# -------------------- SELECTED PLACE -----------------
-
-selected = next(
-    (
-        p for p in PLACES
-        if p["id"] == st.session_state.selected_place
-    ),
-    PLACES[0],
-)
-
-st.markdown(
-    '<div class="section-heading">تفاصيل المكان</div>',
-    unsafe_allow_html=True,
-)
-
-with st.container(border=True):
-
-    st.markdown(
-        f"## {selected['icon']} {selected['name']}"
-    )
-
-    st.caption(selected["english"])
-    st.write(selected["description"])
-    st.caption(f"التصنيف: {selected['category']}")
-
-    if selected["verified"]:
-
-        st.success(
-            "تم العثور على إحداثيات منشورة لهذا الموقع."
-        )
-
-        st.code(
-            f"{selected['lat']}, {selected['lon']}",
-            language="text",
-        )
-
-        maps_url = (
-            f"https://www.google.com/maps?q="
-            f"{selected['lat']},{selected['lon']}"
-        )
-
-        st.link_button(
-            "افتح الموقع في Google Maps ↗",
-            maps_url,
-            use_container_width=True,
-        )
-
-    else:
-
-        st.warning(
-            "لم نتحقق بعد من الإحداثيات الدقيقة لهذا المعلم. "
-            "لن نضع له Pin حتى نتأكد من موقعه."
-        )
-
-    save_label = (
-        "✓ تمت إضافته للمحفوظات"
-        if selected["id"] in st.session_state.saved_places
-        else "♡ احفظ هذا المكان"
-    )
-
-    if st.button(
-        save_label,
-        use_container_width=True,
-    ):
-
-        if selected["id"] in st.session_state.saved_places:
-            st.session_state.saved_places.remove(
-                selected["id"]
-            )
-        else:
-            st.session_state.saved_places.append(
-                selected["id"]
-            )
-
-        st.rerun()
-
-# -------------------- SAVED PLACES --------------------
-
-st.markdown(
-    '<div class="section-heading">أماكنك المحفوظة ♡</div>',
-    unsafe_allow_html=True,
-)
-
-if st.session_state.saved_places:
-
-    for place_id in st.session_state.saved_places:
-
-        place = next(
-            p for p in PLACES
-            if p["id"] == place_id
-        )
-
-        st.write(
-            f"{place['icon']} {place['name']}"
-        )
-
-else:
-
-    st.caption(
-        "الأماكن التي تحفظها ستظهر هنا."
-    )
-
-# -------------------- FOOTER --------------------------
-
-st.markdown(
-    """
-    <div class="footer">
-        <b>JAZIF MAP 🌿</b><br>
-        Discover your next destination.
+    popup_html = f"""
+    <div style="width:190px;font-family:Arial;color:#263D32;">
+        <b style="font-size:15px;">{place['name']}</b>
+        <br>
+        <span style="font-size:11px;color:#66766A;">
+            {place['category']}
+        </span>
+        <p style="font-size:12px;line-height:1.5;">
+            {place['description']}
+        </p>
     </div>
-    """,
-    unsafe_allow_html=True,
+    """
+
+    folium.Marker(
+        location=[place["lat"], place["lon"]],
+        tooltip=place["name"],
+        popup=folium.Popup(popup_html, max_width=250),
+        icon=folium.Icon(
+            color="green",
+            icon="leaf",
+            prefix="fa"
+        )
+    ).add_to(park_map)
+
+map_result = st_folium(
+    park_map,
+    width=None,
+    height=520,
+    returned_objects=["last_object_clicked"]
 )
+
+# ---------------- SELECTED PLACE ----------------
+clicked = map_result.get("last_object_clicked")
+
+if clicked:
+    st.markdown(
+        '<div class="section-title">Selected location</div>',
+        unsafe_allow_html=True
+    )
+    st.caption(
+        f"Coordinates: {clicked['lat']:.5f}, {clicked['lng']:.5f}"
+    )
+
+# ---------------- PLACES LIST ----------------
+st.markdown('<div class="section-title">Discover destinations</div>', unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
+
+for index, place in enumerate(filtered_places):
+    with (col1 if index % 2 == 0 else col2):
+        st.markdown(f"""
+        <div class="place-card">
+            <div class="place-category">{place['category']}</div>
+            <h3>{place['name']}</h3>
+            <p>{place['description']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ---------------- FOOTER ----------------
+st.markdown("""
+<div class="footer">
+    JAZIF MAP © 2026<br>
+    EXPLORE KING SALMAN PARK
+</div>
+""", unsafe_allow_html=True)
