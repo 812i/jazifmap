@@ -4,7 +4,6 @@ from streamlit_folium import st_folium
 
 # =====================================================
 # JAZIF MAP | KING SALMAN PARK
-# Independent mobile-first Streamlit project
 # =====================================================
 
 st.set_page_config(
@@ -24,10 +23,7 @@ WHITE = "#FFFFFF"
 MUTED = "#66766A"
 BORDER = "#E2E8DF"
 
-# -------------------- VERIFIED LOCATION DATA ---------
-
-# Coordinates published for King Salman Park Visitor Pavilion.
-# Other attractions are listed but deliberately have no invented coordinates.
+# -------------------- PLACES -------------------------
 
 PLACES = [
     {
@@ -188,14 +184,6 @@ st.markdown(
         margin: 22px 0 10px;
     }
 
-    .place-card {
-        background: white;
-        border: 1px solid #E2E8DF;
-        border-radius: 16px;
-        padding: 16px;
-        margin-bottom: 10px;
-    }
-
     .place-icon {
         font-size: 25px;
     }
@@ -231,18 +219,6 @@ st.markdown(
     .status-pending {
         background: #F2EFE4;
         color: #786B42;
-    }
-
-    .detail-box {
-        background: white;
-        border: 1px solid #E2E8DF;
-        border-radius: 18px;
-        padding: 20px;
-        margin-top: 12px;
-    }
-
-    .detail-box h3 {
-        color: #263D32 !important;
     }
 
     .stButton button {
@@ -343,7 +319,7 @@ with filter_col:
     )
 
 with info_col:
-    st.selectbox(
+    display_mode = st.selectbox(
         "طريقة العرض",
         ["الخريطة", "قائمة الأماكن"],
         key="display_mode",
@@ -357,56 +333,128 @@ filtered_places = [
 
 # -------------------- MAP -----------------------------
 
-# The map is centered on the published Visitor Pavilion coordinates.
-# It is NOT a verified park boundary or a complete masterplan overlay.
+if display_mode == "الخريطة":
 
-visitor = next(p for p in PLACES if p["id"] == "visitor")
+    st.markdown(
+        '<div class="section-heading">خريطة حديقة الملك سلمان</div>',
+        unsafe_allow_html=True,
+    )
 
-park_map = folium.Map(
-    location=[visitor["lat"], visitor["lon"]],
-    zoom_start=15,
-    tiles="OpenStreetMap",
-    control_scale=True,
-)
+    # المواقع التي نملك إحداثيات لها فقط
+    mapped_places = [
+        place for place in filtered_places
+        if place["lat"] is not None
+        and place["lon"] is not None
+    ]
 
-for place in filtered_places:
-    if place["lat"] is None or place["lon"] is None:
-        continue
+    # مركز الخريطة
+    visitor = next(
+        p for p in PLACES
+        if p["id"] == "visitor"
+    )
 
-    popup_html = f"""
-    <div style="font-family:Arial;min-width:150px;">
-        <b>{place['icon']} {place['name']}</b><br>
-        <span>{place['english']}</span><br>
-        <small>{place['category']}</small>
-    </div>
-    """
+    park_map = folium.Map(
+        location=[visitor["lat"], visitor["lon"]],
+        zoom_start=15,
+        tiles="OpenStreetMap",
+        control_scale=True,
+    )
 
-    folium.Marker(
-        location=[place["lat"], place["lon"]],
-        tooltip=place["name"],
-        popup=folium.Popup(popup_html, max_width=230),
-        icon=folium.Icon(
-            color="green",
-            icon="info-sign",
-        ),
-    ).add_to(park_map)
+    # إضافة العلامات
+    for place in mapped_places:
 
-# Show a map only with verified pins.
-if st.session_state.display_mode == "الخريطة":
-    st_folium(
+        popup_html = f"""
+        <div style="
+            font-family:Arial;
+            min-width:150px;
+            text-align:center;
+            padding:8px;
+        ">
+            <div style="font-size:24px;">
+                {place['icon']}
+            </div>
+            <b>{place['name']}</b>
+            <br>
+            <span>{place['english']}</span>
+            <br>
+            <small>{place['category']}</small>
+        </div>
+        """
+
+        folium.Marker(
+            location=[place["lat"], place["lon"]],
+            tooltip=place["name"],
+            popup=folium.Popup(
+                popup_html,
+                max_width=230,
+            ),
+            icon=folium.Icon(
+                color="green",
+                icon="info-sign",
+            ),
+        ).add_to(park_map)
+
+    # عرض الخريطة واستقبال الضغط على العلامات
+    map_result = st_folium(
         park_map,
         use_container_width=True,
         height=440,
-        returned_objects=["last_object_clicked", "last_object_clicked_tooltip"],
+        returned_objects=[
+            "last_object_clicked",
+            "last_object_clicked_tooltip",
+        ],
         key="jazif_interactive_map",
     )
+
+    # عند الضغط على Pin: تحديد المكان المختار
+    if map_result:
+
+        clicked_name = map_result.get(
+            "last_object_clicked_tooltip"
+        )
+
+        if clicked_name:
+            clicked_place = next(
+                (
+                    p for p in PLACES
+                    if p["name"] == clicked_name
+                ),
+                None,
+            )
+
+            if clicked_place:
+                st.session_state.selected_place = (
+                    clicked_place["id"]
+                )
+
+        # طريقة احتياطية تعتمد على إحداثيات الضغط
+        clicked_coordinates = map_result.get(
+            "last_object_clicked"
+        )
+
+        if clicked_coordinates and not clicked_name:
+
+            click_lat = clicked_coordinates.get("lat")
+            click_lon = clicked_coordinates.get("lng")
+
+            if click_lat is not None and click_lon is not None:
+
+                for place in mapped_places:
+
+                    if (
+                        abs(place["lat"] - click_lat) < 0.00015
+                        and abs(place["lon"] - click_lon) < 0.00015
+                    ):
+                        st.session_state.selected_place = (
+                            place["id"]
+                        )
+                        break
 
     st.markdown(
         """
         <div class="map-note">
-            📍 المواقع الظاهرة على الخريطة هي المواقع التي توفرت لها
-            إحداثيات منشورة. بقية المعالم موجودة في قائمة الاستكشاف
-            بانتظار التحقق من مواقعها الدقيقة.
+            📍 اضغط على العلامة الخضراء لعرض تفاصيل المكان.
+            ستتم إضافة بقية المواقع بعد التحقق من إحداثياتها.
         </div>
         """,
         unsafe_allow_html=True,
@@ -420,10 +468,13 @@ st.markdown(
 )
 
 for place in filtered_places:
+
     with st.container(border=True):
+
         col1, col2 = st.columns([4, 1])
 
         with col1:
+
             st.markdown(
                 f"""
                 <div class="place-icon">{place['icon']}</div>
@@ -441,11 +492,14 @@ for place in filtered_places:
                 )
             else:
                 st.markdown(
-                    '<span class="status status-pending">الموقع الدقيق قيد التحقق</span>',
+                    '<span class="status status-pending">'
+                    'الموقع الدقيق قيد التحقق'
+                    '</span>',
                     unsafe_allow_html=True,
                 )
 
         with col2:
+
             if st.button(
                 "التفاصيل",
                 key=f"details_{place['id']}",
@@ -457,8 +511,11 @@ for place in filtered_places:
 # -------------------- SELECTED PLACE -----------------
 
 selected = next(
-    (p for p in PLACES if p["id"] == st.session_state.selected_place),
-    visitor,
+    (
+        p for p in PLACES
+        if p["id"] == st.session_state.selected_place
+    ),
+    PLACES[0],
 )
 
 st.markdown(
@@ -467,13 +524,20 @@ st.markdown(
 )
 
 with st.container(border=True):
-    st.markdown(f"## {selected['icon']} {selected['name']}")
+
+    st.markdown(
+        f"## {selected['icon']} {selected['name']}"
+    )
+
     st.caption(selected["english"])
     st.write(selected["description"])
     st.caption(f"التصنيف: {selected['category']}")
 
     if selected["verified"]:
-        st.success("تم العثور على إحداثيات منشورة لهذا الموقع.")
+
+        st.success(
+            "تم العثور على إحداثيات منشورة لهذا الموقع."
+        )
 
         st.code(
             f"{selected['lat']}, {selected['lon']}",
@@ -490,7 +554,9 @@ with st.container(border=True):
             maps_url,
             use_container_width=True,
         )
+
     else:
+
         st.warning(
             "لم نتحقق بعد من الإحداثيات الدقيقة لهذا المعلم. "
             "لن نضع له Pin حتى نتأكد من موقعه."
@@ -502,11 +568,20 @@ with st.container(border=True):
         else "♡ احفظ هذا المكان"
     )
 
-    if st.button(save_label, use_container_width=True):
+    if st.button(
+        save_label,
+        use_container_width=True,
+    ):
+
         if selected["id"] in st.session_state.saved_places:
-            st.session_state.saved_places.remove(selected["id"])
+            st.session_state.saved_places.remove(
+                selected["id"]
+            )
         else:
-            st.session_state.saved_places.append(selected["id"])
+            st.session_state.saved_places.append(
+                selected["id"]
+            )
+
         st.rerun()
 
 # -------------------- SAVED PLACES --------------------
@@ -517,11 +592,23 @@ st.markdown(
 )
 
 if st.session_state.saved_places:
+
     for place_id in st.session_state.saved_places:
-        place = next(p for p in PLACES if p["id"] == place_id)
-        st.write(f"{place['icon']} {place['name']}")
+
+        place = next(
+            p for p in PLACES
+            if p["id"] == place_id
+        )
+
+        st.write(
+            f"{place['icon']} {place['name']}"
+        )
+
 else:
-    st.caption("الأماكن التي تحفظها ستظهر هنا.")
+
+    st.caption(
+        "الأماكن التي تحفظها ستظهر هنا."
+    )
 
 # -------------------- FOOTER --------------------------
 
