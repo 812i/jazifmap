@@ -1,16 +1,21 @@
 
 import streamlit as st
-import folium
-from streamlit_folium import st_folium
+import pandas as pd
 
-# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="JAZIF MAP",
     page_icon="🌿",
     layout="wide"
 )
 
-# ---------------- STYLE ----------------
+# COLORS
+DARK = "#263D32"
+GREEN = "#496653"
+LIGHT = "#E7EDE5"
+BG = "#F7F7F2"
+MUTED = "#66766A"
+
+# STYLE
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
@@ -25,118 +30,114 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-    max-width: 1200px;
+    max-width: 1150px;
     padding-top: 2rem;
-    padding-bottom: 3rem;
 }
 
 .hero {
     background: #263D32;
     color: #F7F7F2;
-    padding: 35px;
+    padding: 38px 30px;
     border-radius: 22px;
     margin-bottom: 25px;
 }
 
 .eyebrow {
     color: #C5D3C6;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 3px;
-    font-weight: 700;
 }
 
 .hero h1 {
-    font-size: clamp(38px, 7vw, 65px);
-    margin: 12px 0;
+    font-size: clamp(42px, 8vw, 68px);
     font-weight: 800;
+    margin: 12px 0;
     letter-spacing: -2px;
 }
 
 .hero p {
     color: #E2E8DF;
-    font-size: 15px;
-    max-width: 520px;
+    font-size: 14px;
     line-height: 1.8;
+    max-width: 520px;
 }
 
-.section-title {
+.section {
     font-size: 23px;
     font-weight: 800;
-    color: #263D32;
-    margin: 20px 0 12px;
+    margin: 28px 0 12px;
 }
 
-.place-card {
+.place {
     background: white;
     border: 1px solid #E2E8DF;
-    border-radius: 17px;
-    padding: 19px;
+    border-radius: 16px;
+    padding: 18px;
     margin-bottom: 12px;
 }
 
-.place-category {
+.category {
     color: #66766A;
     font-size: 11px;
     letter-spacing: 1.5px;
     font-weight: 700;
-    text-transform: uppercase;
 }
 
-.place-card h3 {
+.place h3 {
     color: #263D32;
     margin: 8px 0;
-    font-size: 19px;
+    font-size: 18px;
 }
 
-.place-card p {
+.place p {
     color: #66766A;
     font-size: 13px;
     line-height: 1.7;
 }
 
 .footer {
-    color: #66766A;
-    font-size: 12px;
     text-align: center;
-    padding: 30px 0 10px;
+    color: #66766A;
+    font-size: 11px;
+    padding: 35px 0 15px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- PLACES ----------------
-PLACES = [
+# PLACES
+places = [
     {
         "name": "Visitor Pavilion",
         "category": "Visitor Experience",
-        "description": "A starting point for visitors to explore the park and discover its destinations.",
+        "description": "A starting point to discover the park and its destinations.",
         "lat": 24.7143,
         "lon": 46.71166
     },
     {
         "name": "Royal Arts Complex",
         "category": "Arts & Culture",
-        "description": "A destination dedicated to arts, creativity and cultural experiences.",
+        "description": "A destination for art, creativity and cultural experiences.",
         "lat": 24.7160,
         "lon": 46.7100
     },
     {
         "name": "Museum of World Cultures",
         "category": "Museum",
-        "description": "A cultural destination celebrating different cultures and stories.",
+        "description": "Discover cultures, stories and heritage from around the world.",
         "lat": 24.7170,
         "lon": 46.7130
     },
     {
         "name": "Outdoor Cinema",
         "category": "Entertainment",
-        "description": "An outdoor destination for screenings and shared experiences.",
+        "description": "An outdoor space for screenings and shared experiences.",
         "lat": 24.7125,
         "lon": 46.7150
     },
     {
         "name": "Amphitheater",
         "category": "Entertainment",
-        "description": "A space for performances, gatherings and cultural events.",
+        "description": "A venue for performances, gatherings and events.",
         "lat": 24.7105,
         "lon": 46.7105
     },
@@ -150,116 +151,98 @@ PLACES = [
     {
         "name": "Walking Trails",
         "category": "Outdoor",
-        "description": "Outdoor paths for walking, exploring and enjoying the surroundings.",
+        "description": "Explore the park through outdoor walking paths.",
         "lat": 24.7130,
         "lon": 46.7060
     }
 ]
 
-# ---------------- HEADER ----------------
+# HEADER
 st.markdown("""
 <div class="hero">
     <div class="eyebrow">DISCOVER • EXPLORE • CONNECT</div>
     <h1>JAZIF MAP.</h1>
     <p>
-        Your guide to discovering the destinations, spaces
-        and experiences of King Salman Park.
+        Your guide to discovering the destinations,
+        spaces and experiences of King Salman Park.
     </p>
-    <div style="margin-top:25px;color:#C5D3C6;font-size:12px;">
-        RIYADH, SAUDI ARABIA &nbsp; / &nbsp; EXPLORE THE PARK
+    <div style="color:#C5D3C6;font-size:11px;margin-top:22px;">
+        RIYADH, SAUDI ARABIA / EXPLORE THE PARK
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- FILTERS ----------------
-st.markdown('<div class="section-title">Explore the map</div>', unsafe_allow_html=True)
+# FILTER
+st.markdown('<div class="section">Explore the park</div>',
+            unsafe_allow_html=True)
 
-categories = ["All"] + sorted(set(p["category"] for p in PLACES))
+categories = ["All"] + sorted(set(p["category"] for p in places))
 
-selected_category = st.selectbox(
-    "Choose a category",
-    categories
-)
+category = st.selectbox("Filter by category", categories)
 
-filtered_places = [
-    p for p in PLACES
-    if selected_category == "All" or p["category"] == selected_category
+filtered = [
+    p for p in places
+    if category == "All" or p["category"] == category
 ]
 
-# ---------------- MAP ----------------
-st.markdown("""
-<div style="color:#66766A;font-size:13px;margin-bottom:12px;">
-    Select a marker to discover more about each destination.
+# MAP
+st.markdown('<div class="section">Interactive map</div>',
+            unsafe_allow_html=True)
+
+st.caption("Select a destination below to explore its details.")
+
+map_data = pd.DataFrame(filtered)
+
+st.map(
+    map_data,
+    latitude="lat",
+    longitude="lon",
+    color="#496653",
+    size=20,
+    zoom=13,
+    use_container_width=True
+)
+
+# DESTINATION DETAILS
+st.markdown('<div class="section">Discover destinations</div>',
+            unsafe_allow_html=True)
+
+selected_name = st.selectbox(
+    "Choose a destination",
+    [p["name"] for p in filtered]
+)
+
+selected = next(
+    p for p in filtered
+    if p["name"] == selected_name
+)
+
+st.markdown(f"""
+<div class="place">
+    <div class="category">{selected['category']}</div>
+    <h3>{selected['name']}</h3>
+    <p>{selected['description']}</p>
+    <p>📍 {selected['lat']}, {selected['lon']}</p>
 </div>
 """, unsafe_allow_html=True)
 
-park_map = folium.Map(
-    location=[24.7143, 46.71166],
-    zoom_start=14,
-    tiles="CartoDB positron",
-    control_scale=True
-)
-
-for place in filtered_places:
-    popup_html = f"""
-    <div style="width:190px;font-family:Arial;color:#263D32;">
-        <b style="font-size:15px;">{place['name']}</b>
-        <br>
-        <span style="font-size:11px;color:#66766A;">
-            {place['category']}
-        </span>
-        <p style="font-size:12px;line-height:1.5;">
-            {place['description']}
-        </p>
-    </div>
-    """
-
-    folium.Marker(
-        location=[place["lat"], place["lon"]],
-        tooltip=place["name"],
-        popup=folium.Popup(popup_html, max_width=250),
-        icon=folium.Icon(
-            color="green",
-            icon="leaf",
-            prefix="fa"
-        )
-    ).add_to(park_map)
-
-map_result = st_folium(
-    park_map,
-    width=None,
-    height=520,
-    returned_objects=["last_object_clicked"]
-)
-
-# ---------------- SELECTED PLACE ----------------
-clicked = map_result.get("last_object_clicked")
-
-if clicked:
-    st.markdown(
-        '<div class="section-title">Selected location</div>',
-        unsafe_allow_html=True
-    )
-    st.caption(
-        f"Coordinates: {clicked['lat']:.5f}, {clicked['lng']:.5f}"
-    )
-
-# ---------------- PLACES LIST ----------------
-st.markdown('<div class="section-title">Discover destinations</div>', unsafe_allow_html=True)
+# ALL PLACES
+st.markdown('<div class="section">All destinations</div>',
+            unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
 
-for index, place in enumerate(filtered_places):
-    with (col1 if index % 2 == 0 else col2):
+for i, place in enumerate(filtered):
+    with col1 if i % 2 == 0 else col2:
         st.markdown(f"""
-        <div class="place-card">
-            <div class="place-category">{place['category']}</div>
+        <div class="place">
+            <div class="category">{place['category']}</div>
             <h3>{place['name']}</h3>
             <p>{place['description']}</p>
         </div>
         """, unsafe_allow_html=True)
 
-# ---------------- FOOTER ----------------
+# FOOTER
 st.markdown("""
 <div class="footer">
     JAZIF MAP © 2026<br>
